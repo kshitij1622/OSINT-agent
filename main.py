@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from modules.subdomain_enum import enumerate_subdomains
 from modules.port_scanner import scan_host
 from modules.tech_stack import fingerprint
+from modules.github_scanner import scan_github
 from report import generate_report, print_report, save_report
 
 load_dotenv()
@@ -80,8 +81,12 @@ def main():
         status = tech_results[host].get("status_code", "N/A")
         print(f"    {host} [{status}] — {', '.join(techs) if techs else 'no techs detected'}")
 
-    # --- Step 5: Report ---
-    report = generate_report(domain, subdomains, scan_results, tech_results)
+    # --- Step 5: GitHub Secret Scanning ---
+    print(f"\n[*] GitHub secret scanning...")
+    github_findings = scan_github(domain, GITHUB_TOKEN)
+
+    # --- Step 6: Report ---
+    report = generate_report(domain, subdomains, scan_results, tech_results, github_findings)
     print_report(report)
 
     filename = save_report(report)

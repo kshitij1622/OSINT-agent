@@ -2,8 +2,10 @@ import json
 from datetime import datetime
 
 
-def generate_report(domain, subdomains, scan_results, tech_results):
+def generate_report(domain, subdomains, scan_results, tech_results, github_findings=None):
     total_open_ports = sum(len(v["open_ports"]) for v in scan_results.values())
+    github_findings = github_findings or []
+    secrets_found = sum(len(f["secrets"]) for f in github_findings)
     return {
         "target": domain,
         "generated_at": datetime.utcnow().isoformat() + "Z",
@@ -11,10 +13,13 @@ def generate_report(domain, subdomains, scan_results, tech_results):
             "total_subdomains": len(subdomains),
             "live_hosts": len(scan_results),
             "total_open_ports": total_open_ports,
+            "github_files_found": len(github_findings),
+            "potential_secrets": secrets_found,
         },
         "subdomains": subdomains,
         "port_scan": scan_results,
         "tech_stack": tech_results,
+        "github_findings": github_findings,
     }
 
 
@@ -27,9 +32,11 @@ def print_report(report):
 
     s = report["summary"]
     print(f"\nSUMMARY")
-    print(f"  Subdomains found : {s['total_subdomains']}")
-    print(f"  Live hosts       : {s['live_hosts']}")
-    print(f"  Open ports found : {s['total_open_ports']}")
+    print(f"  Subdomains found   : {s['total_subdomains']}")
+    print(f"  Live hosts         : {s['live_hosts']}")
+    print(f"  Open ports found   : {s['total_open_ports']}")
+    print(f"  GitHub files found : {s.get('github_files_found', 0)}")
+    print(f"  Potential secrets  : {s.get('potential_secrets', 0)}")
 
     print(f"\nSUBDOMAINS ({s['total_subdomains']} total)")
     for sub in report["subdomains"][:20]:
@@ -58,6 +65,20 @@ def print_report(report):
             for k, v in headers.items():
                 print(f"    {k}: {v}")
         print(f"    Technologies: {techs}")
+
+    print(f"\nGITHUB FINDINGS")
+    findings = report.get("github_findings", [])
+    if not findings:
+        print("  None found")
+    else:
+        for f in findings:
+            print(f"  {f['repo']} — {f['file']}")
+            print(f"    URL: {f['url']}")
+            if f["secrets"]:
+                for s in f["secrets"]:
+                    print(f"    [!] {s['type']} ({s['count']} match{'es' if s['count'] > 1 else ''})")
+            else:
+                print(f"    Domain mentioned, no secrets pattern matched")
 
     print(f"\n{sep}\n")
 
