@@ -9,6 +9,7 @@ from modules.port_scanner import scan_host
 from modules.tech_stack import fingerprint
 from modules.github_scanner import scan_github
 from report import generate_report, print_report, save_report
+from html_report import save_html_report
 
 load_dotenv()
 
@@ -90,7 +91,11 @@ def main():
     print_report(report)
 
     filename = save_report(report)
-    print(f"[+] Full report saved to {filename}\n")
+    print(f"[+] JSON report saved to {filename}")
+
+    html_filename = save_html_report(report)
+    print(f"[+] HTML report saved to {html_filename}")
+    print(f"    Open it in your browser: open {html_filename}\n")
 
 
 if __name__ == "__main__":
