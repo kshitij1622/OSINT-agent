@@ -8,6 +8,7 @@ from modules.subdomain_enum import enumerate_subdomains
 from modules.port_scanner import scan_host
 from modules.tech_stack import fingerprint
 from modules.github_scanner import scan_github
+from modules.breach_check import scan_breaches
 from report import generate_report, print_report, save_report
 from html_report import save_html_report
 
@@ -15,6 +16,7 @@ load_dotenv()
 
 VT_API_KEY = os.getenv("VIRUSTOTAL_API_KEY")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+HIBP_API_KEY = os.getenv("HIBP_API_KEY")
 
 MAX_HOSTS_TO_SCAN = 20  # cap to avoid scanning for hours
 
@@ -86,8 +88,12 @@ def main():
     print(f"\n[*] GitHub secret scanning...")
     github_findings = scan_github(domain, GITHUB_TOKEN)
 
-    # --- Step 6: Report ---
-    report = generate_report(domain, subdomains, scan_results, tech_results, github_findings)
+    # --- Step 6: Breach Data Check ---
+    print(f"\n[*] Checking breach data...")
+    breach_data = scan_breaches(domain, HIBP_API_KEY)
+
+    # --- Step 7: Report ---
+    report = generate_report(domain, subdomains, scan_results, tech_results, github_findings, breach_data)
     print_report(report)
 
     filename = save_report(report)

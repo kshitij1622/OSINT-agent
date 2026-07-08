@@ -9,6 +9,10 @@ def generate_html(report):
     port_scan = report["port_scan"]
     tech_stack = report["tech_stack"]
     github_findings = report.get("github_findings", [])
+    breach_data = report.get("breach_data", {})
+    breach_emails = breach_data.get("emails", {})
+    breach_details = breach_data.get("breach_details", {})
+    breach_summary = breach_data.get("summary", {})
 
     # --- Subdomain rows ---
     subdomain_rows = ""
@@ -258,6 +262,14 @@ def generate_html(report):
         <div class="number" style="color: {'#f87171' if s.get('potential_secrets', 0) > 0 else '#38bdf8'}">{s.get('potential_secrets', 0)}</div>
         <div class="label">Potential Secrets</div>
     </div>
+    <div class="stat-card">
+        <div class="number" style="color: {'#f87171' if s.get('breached_accounts', 0) > 0 else '#38bdf8'}">{s.get('breached_accounts', 0)}</div>
+        <div class="label">Breached Accounts</div>
+    </div>
+    <div class="stat-card">
+        <div class="number" style="color: {'#f87171' if s.get('breaches_found', 0) > 0 else '#38bdf8'}">{s.get('breaches_found', 0)}</div>
+        <div class="label">Breaches Found</div>
+    </div>
 </div>
 
 <section>
@@ -293,6 +305,21 @@ def generate_html(report):
             {tech_rows if tech_rows else '<tr><td colspan="5">No data</td></tr>'}
         </tbody>
     </table>
+</section>
+
+<section>
+    <h2>Breach Data</h2>
+    {'<p style="color:#64748b;font-size:0.85rem;margin-bottom:1rem;">No breached accounts found for this domain.</p>' if not breach_emails else f'''
+    <p style="color:#94a3b8;font-size:0.85rem;margin-bottom:1rem;">
+        {breach_summary.get("total_accounts", 0)} accounts from this domain appeared in {breach_summary.get("total_breaches", 0)} data breaches.
+        Data exposed: {", ".join(breach_summary.get("data_types_exposed", [])[:6]) or "Unknown"}
+    </p>
+    <table>
+        <thead><tr><th>Breach</th><th>Date</th><th>Accounts Affected</th><th>Data Exposed</th></tr></thead>
+        <tbody>
+            {"".join(f"<tr><td>{d['title']}</td><td>{d['date']}</td><td>{d['pwn_count']:,}</td><td>{', '.join(d['data_classes'][:3])}</td></tr>" for d in list(breach_details.values())[:10])}
+        </tbody>
+    </table>'''}
 </section>
 
 <section>

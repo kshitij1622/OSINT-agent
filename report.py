@@ -2,10 +2,12 @@ import json
 from datetime import datetime
 
 
-def generate_report(domain, subdomains, scan_results, tech_results, github_findings=None):
+def generate_report(domain, subdomains, scan_results, tech_results, github_findings=None, breach_data=None):
     total_open_ports = sum(len(v["open_ports"]) for v in scan_results.values())
     github_findings = github_findings or []
     secrets_found = sum(len(f["secrets"]) for f in github_findings)
+    breach_data = breach_data or {}
+    breach_summary = breach_data.get("summary", {})
     return {
         "target": domain,
         "generated_at": datetime.utcnow().isoformat() + "Z",
@@ -15,11 +17,14 @@ def generate_report(domain, subdomains, scan_results, tech_results, github_findi
             "total_open_ports": total_open_ports,
             "github_files_found": len(github_findings),
             "potential_secrets": secrets_found,
+            "breached_accounts": breach_summary.get("total_accounts", 0),
+            "breaches_found": breach_summary.get("total_breaches", 0),
         },
         "subdomains": subdomains,
         "port_scan": scan_results,
         "tech_stack": tech_results,
         "github_findings": github_findings,
+        "breach_data": breach_data,
     }
 
 
@@ -37,6 +42,8 @@ def print_report(report):
     print(f"  Open ports found   : {s['total_open_ports']}")
     print(f"  GitHub files found : {s.get('github_files_found', 0)}")
     print(f"  Potential secrets  : {s.get('potential_secrets', 0)}")
+    print(f"  Breached accounts  : {s.get('breached_accounts', 0)}")
+    print(f"  Breaches found     : {s.get('breaches_found', 0)}")
 
     print(f"\nSUBDOMAINS ({s['total_subdomains']} total)")
     for sub in report["subdomains"][:20]:
@@ -65,6 +72,22 @@ def print_report(report):
             for k, v in headers.items():
                 print(f"    {k}: {v}")
         print(f"    Technologies: {techs}")
+
+    print(f"\nBREACH DATA")
+    bd = report.get("breach_data", {})
+    emails = bd.get("emails", {})
+    breach_details = bd.get("breach_details", {})
+    b_summary = bd.get("summary", {})
+    if not emails:
+        print("  No breached accounts found")
+    else:
+        print(f"  {b_summary.get('total_accounts', 0)} accounts found across {b_summary.get('total_breaches', 0)} breaches")
+        data_types = b_summary.get("data_types_exposed", [])
+        if data_types:
+            print(f"  Data exposed: {', '.join(data_types[:5])}")
+        print(f"\n  Top breaches:")
+        for name, detail in list(breach_details.items())[:5]:
+            print(f"    {detail['title']} ({detail['date']}) — {detail['pwn_count']:,} accounts")
 
     print(f"\nGITHUB FINDINGS")
     findings = report.get("github_findings", [])
